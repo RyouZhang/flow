@@ -1,5 +1,9 @@
 package flow
 
+import (
+	"github.com/RyouZhang/async-go"
+)
+
 type OutputBrick struct {
 	name     string
 	kernal   func(<-chan *Message, chan<- *LogMessage, chan<- *ErrMessage)
@@ -28,7 +32,19 @@ func (b *OutputBrick) loop(inQueue <-chan *Message) {
 		close(b.errQueue)
 		close(b.logQueue)
 	}()
-	b.kernal(inQueue, b.logQueue, b.errQueue)
+Start:
+	_, err := async.Lambda(func()(interface{}, error) {
+		b.kernal(inQueue, b.logQueue, b.errQueue)
+		return nil, nil
+	}, 0)	
+	if err != nil {
+		b.logQueue <- &LogMessage{
+			Level: 3,
+			Name: b.Name(),
+			Raw: err.Error(),
+		}
+		goto Start
+	}
 }
 
 func NewOutputBrick(

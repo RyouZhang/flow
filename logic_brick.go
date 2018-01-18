@@ -3,6 +3,8 @@ package flow
 import (
 	"runtime"
 	"sync"
+
+	"github.com/RyouZhang/async-go"
 )
 
 type LogicBrick struct {
@@ -44,7 +46,9 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 				b.wg.Done()
 				b.workers <- true
 			}()
-			res, err := b.kernal(msg)
+			res, err := async.Lambda(func()(interface{}, error){
+				return b.kernal(msg)
+			}, 0)			
 			if err != nil {
 				b.errQueue <- &ErrMessage{
 					Name: b.name,
@@ -52,7 +56,7 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 					Reason: err.Error(),
 				}
 			} else {
-				b.outQueue <- res
+				b.outQueue <- res.(*Message)
 			}
 		}(msg)
 	}
