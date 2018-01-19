@@ -47,7 +47,7 @@ func NewOutputBrick(
 	return &OutputBrick{
 		name:      name,
 		kernal:    kernal,
-		failQueue: make(chan interface{}, 16),
-		errQueue:  make(chan error, 16),
+		failQueue: make(chan interface{}, 8),
+		errQueue:  make(chan error, 8),
 	}
 }

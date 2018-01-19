@@ -73,7 +73,7 @@ func NewLogicBrick(
 		workers:   make(chan bool, max_worker),
 		outQueue:  make(chan interface{}, chanSize),
 		failQueue: make(chan interface{}, chanSize),
-		errQueue:  make(chan error, 16),
+		errQueue:  make(chan error, 8),
 	}
 	for i := 0; i < max_worker; i++ {
 		l.workers <- true

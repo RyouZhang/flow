@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -39,6 +40,8 @@ func (b *Board) AddBricks(bricks ...IBrick) {
 			if _, ok := brick.(IFailed); ok {
 				go b.onFailed(brick.(IBrick).Name(), brick.(IFailed).Failed())
 			}
+		} else {
+			panic(errors.New("Duplicate Brick Name:" + brick.(IBrick).Name()))
 		}
 	}
 }
@@ -85,7 +88,7 @@ func (b *Board) Stop() {
 func (b *Board) onError(name string, inQueue <-chan error) {
 	for err := range inQueue {
 		if b.errHandler != nil {
-			b.errHandler(name, err)
+			b.errHandler(b.name+"/"+name, err)
 		}
 	}
 }
@@ -93,7 +96,7 @@ func (b *Board) onError(name string, inQueue <-chan error) {
 func (b *Board) onFailed(name string, inQueue <-chan interface{}) {
 	for msg := range inQueue {
 		if b.failedHanlder != nil {
-			b.failedHanlder(name, msg)
+			b.failedHanlder(b.name+"/"+name, msg)
 		}
 	}
 }

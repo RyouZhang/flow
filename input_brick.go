@@ -49,12 +49,12 @@ Start:
 func NewInputBrick(
 	name string,
 	kernal func(chan<- interface{}, <-chan bool),
-	size int) *InputBrick {
+	chanSize int) *InputBrick {
 	return &InputBrick{
 		name:     name,
 		kernal:   kernal,
 		shutdown: make(chan bool),
 		errQueue: make(chan error, 8),
-		outQueue: make(chan interface{}, size),
+		outQueue: make(chan interface{}, chanSize),
 	}
 }
