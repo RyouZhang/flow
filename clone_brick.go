@@ -36,7 +36,7 @@ func deepCopy(source interface{}) (interface{}, error) {
 type CloneBrick struct {
 	name      string
 	chanSize  int
-	errQueue  chan interface{}
+	errQueue  chan error
 	outQueues []chan interface{}
 }
 
@@ -48,11 +48,11 @@ func (b *CloneBrick) Linked(inQueue chan interface{}) {
 	go b.loop(inQueue)
 }
 
-func (b *CloneBrick) Errors() <-chan interface{} {
+func (b *CloneBrick) Errors() <-chan error {
 	return b.errQueue
 }
 
-func (b *CloneBrick) Output() <-chan interface{} {
+func (b *CloneBrick) Succeed() <-chan interface{} {
 	output := make(chan interface{}, b.chanSize)
 	b.outQueues = append(b.outQueues, output)
 	return output
@@ -63,7 +63,7 @@ func (b *CloneBrick) loop(inQueue chan interface{}) {
 		for _, output := range b.outQueues {
 			temp, err := deepCopy(msg)
 			if err != nil {
-				//todo
+				b.errQueue <- err
 				break
 			}
 			output <- temp
@@ -79,6 +79,6 @@ func NewCloneBrick(name string, chanSize int) *CloneBrick {
 		name:      name,
 		chanSize:  chanSize,
 		outQueues: make([]chan interface{}, 0),
-		errQueue:  make(chan interface{}, chanSize),
+		errQueue:  make(chan error, 8),
 	}
 }

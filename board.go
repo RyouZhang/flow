@@ -8,7 +8,8 @@ type Board struct {
 	name       string
 	wg         sync.WaitGroup
 	bricks     map[string]IBrick
-	errHandler func(interface{})
+	errHandler func(string, error)
+	failedHanlder func(string, interface{})
 }
 
 func NewBoard(name string) *Board {
@@ -18,8 +19,12 @@ func NewBoard(name string) *Board {
 	}
 }
 
-func (b *Board) SetErrHandler(errHandler func(interface{})) {
+func (b *Board) SetErrHandler(errHandler func(string, error)) {
 	b.errHandler = errHandler
+}
+
+func (b *Board)SetFailedHandler(failedHanlder func(string, interface{})) {
+	b.failedHanlder = failedHanlder
 }
 
 func (b *Board) AddBricks(bricks ...IBrick) {
@@ -29,24 +34,27 @@ func (b *Board) AddBricks(bricks ...IBrick) {
 			b.bricks[brick.Name()] = brick
 
 			if _, ok := brick.(IError); ok {
-				go b.onError(brick.(IError).Errors())
+				go b.onError(brick.(IBrick).Name(), brick.(IError).Errors())
+			}
+			if _, ok := brick.(IFailed); ok {
+				go b.onFailed(brick.(IBrick).Name(), brick.(IFailed).Failed())
 			}
 		}
 	}
 }
 
-func (b *Board) Connect(out IOutput, in IInput) {
+func (b *Board) Connect(out ISucceed, in IInput) {
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
-		in.Linked(out.Output())
+		in.Linked(out.Succeed())
 	}()
 }
 
 func (b *Board) Sequence(bricks ...IBrick) {
 	for i := 0; i < len(bricks); i++ {
 		if i+1 < len(bricks) {
-			b.Connect(bricks[i].(IOutput), bricks[i+1].(IInput))
+			b.Connect(bricks[i].(ISucceed), bricks[i+1].(IInput))
 		}
 	}
 }
@@ -74,10 +82,18 @@ func (b *Board) Stop() {
 	b.wg.Wait()
 }
 
-func (b *Board) onError(inQueue <-chan interface{}) {
-	for msg := range inQueue {
+func (b *Board) onError(name string, inQueue <-chan error) {
+	for err := range inQueue {
 		if b.errHandler != nil {
-			b.errHandler(msg)
+			b.errHandler(name, err)
+		}
+	}
+}
+
+func (b *Board) onFailed(name string, inQueue <-chan interface{}) {
+	for msg := range inQueue {
+		if b.failedHanlder != nil {
+			b.failedHanlder(name, msg)
 		}
 	}
 }

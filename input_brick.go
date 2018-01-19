@@ -8,6 +8,7 @@ type InputBrick struct {
 	name     string
 	kernal   func(chan<- interface{}, <-chan bool)
 	shutdown chan bool
+	errQueue chan error
 	outQueue chan interface{}
 }
 
@@ -15,8 +16,12 @@ func (b *InputBrick) Name() string {
 	return b.name
 }
 
-func (b *InputBrick) Output() <-chan interface{} {
+func (b *InputBrick) Succeed() <-chan interface{} {
 	return b.outQueue
+}
+
+func (b *InputBrick) Errors() <-chan error {
+	return b.errQueue
 }
 
 func (b *InputBrick) Start() {
@@ -36,6 +41,7 @@ Start:
 		return nil, nil
 	}, 0)
 	if err != nil {   
+		b.errQueue <- err
 		goto Start
 	}
 }
@@ -48,6 +54,7 @@ func NewInputBrick(
 		name:     name,
 		kernal:   kernal,
 		shutdown: make(chan bool),
+		errQueue: make(chan error, 8),
 		outQueue: make(chan interface{}, size),
 	}
 }

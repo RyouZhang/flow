@@ -13,10 +13,14 @@ type IEntry interface {
 	Stop()
 }
 
-type IOutput interface {
-	Output() <-chan interface{}
+type ISucceed interface {
+	Succeed() <-chan interface{}
+}
+
+type IFailed interface {
+	Failed() <-chan interface{}
 }
 
 type IError interface {
-	Errors() <-chan interface{}
+	Errors() <-chan error
 }

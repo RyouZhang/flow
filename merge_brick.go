@@ -15,7 +15,7 @@ func (b *MergeBrick) Name() string {
 	return b.name
 }
 
-func (b *MergeBrick) Output() <-chan interface{} {
+func (b *MergeBrick) Succeed() <-chan interface{} {
 	return b.outQueue
 }
 
