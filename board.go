@@ -54,14 +54,6 @@ func (b *Board) Connect(out ISucceed, in IInput) {
 	}()
 }
 
-func (b *Board) Sequence(bricks ...IBrick) {
-	for i := 0; i < len(bricks); i++ {
-		if i+1 < len(bricks) {
-			b.Connect(bricks[i].(ISucceed), bricks[i+1].(IInput))
-		}
-	}
-}
-
 func (b *Board) Start() {
 	for _, brick := range b.bricks {
 		ob, ok := brick.(IEntry)
