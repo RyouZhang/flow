@@ -5,9 +5,9 @@ import (
 )
 
 type OutputBrick struct {
-	name     string
-	kernal   func(<-chan interface{}, chan<- interface{}, chan<- error)
-	errQueue chan error
+	name      string
+	kernal    func(<-chan interface{}, chan<- interface{}, chan<- error)
+	errQueue  chan error
 	failQueue chan interface{}
 }
 
@@ -45,9 +45,9 @@ func NewOutputBrick(
 	name string,
 	kernal func(<-chan interface{}, chan<- interface{}, chan<- error)) *OutputBrick {
 	return &OutputBrick{
-		name:     name,
-		kernal:   kernal,
+		name:      name,
+		kernal:    kernal,
 		failQueue: make(chan interface{}, 16),
-		errQueue: make(chan error, 16),
+		errQueue:  make(chan error, 16),
 	}
 }

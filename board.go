@@ -5,10 +5,10 @@ import (
 )
 
 type Board struct {
-	name       string
-	wg         sync.WaitGroup
-	bricks     map[string]IBrick
-	errHandler func(string, error)
+	name          string
+	wg            sync.WaitGroup
+	bricks        map[string]IBrick
+	errHandler    func(string, error)
 	failedHanlder func(string, interface{})
 }
 
@@ -23,7 +23,7 @@ func (b *Board) SetErrHandler(errHandler func(string, error)) {
 	b.errHandler = errHandler
 }
 
-func (b *Board)SetFailedHandler(failedHanlder func(string, interface{})) {
+func (b *Board) SetFailedHandler(failedHanlder func(string, interface{})) {
 	b.failedHanlder = failedHanlder
 }
 

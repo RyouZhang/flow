@@ -8,13 +8,13 @@ import (
 )
 
 type LogicBrick struct {
-	name     string
-	workers  chan bool
-	wg       sync.WaitGroup
-	kernal   func(interface{}, chan<- interface{}, chan<- interface{}, chan<- error)
-	errQueue chan error
+	name      string
+	workers   chan bool
+	wg        sync.WaitGroup
+	kernal    func(interface{}, chan<- interface{}, chan<- interface{}, chan<- error)
+	errQueue  chan error
 	failQueue chan interface{}
-	outQueue chan interface{}
+	outQueue  chan interface{}
 }
 
 func (b *LogicBrick) Name() string {
@@ -47,7 +47,7 @@ func (b *LogicBrick) loop(inQueue <-chan interface{}) {
 				return nil, nil
 			}, 0)
 			if err != nil {
-				b.errQueue <- err				
+				b.errQueue <- err
 			}
 		}(msg)
 	}
@@ -68,12 +68,12 @@ func NewLogicBrick(
 		max_worker = runtime.NumCPU()
 	}
 	l := &LogicBrick{
-		name:     name,
-		kernal:   kernal,
-		workers:  make(chan bool, max_worker),
-		outQueue: make(chan interface{}, chanSize),
+		name:      name,
+		kernal:    kernal,
+		workers:   make(chan bool, max_worker),
+		outQueue:  make(chan interface{}, chanSize),
 		failQueue: make(chan interface{}, chanSize),
-		errQueue: make(chan error, 16),
+		errQueue:  make(chan error, 16),
 	}
 	for i := 0; i < max_worker; i++ {
 		l.workers <- true

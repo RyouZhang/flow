@@ -33,14 +33,14 @@ func (b *InputBrick) Stop() {
 	close(b.shutdown)
 }
 
-func (b *InputBrick)loop() {
+func (b *InputBrick) loop() {
 	defer close(b.outQueue)
 Start:
 	_, err := async.Lambda(func() (interface{}, error) {
 		b.kernal(b.outQueue, b.shutdown)
 		return nil, nil
 	}, 0)
-	if err != nil {   
+	if err != nil {
 		b.errQueue <- err
 		goto Start
 	}
