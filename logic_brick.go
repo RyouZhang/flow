@@ -11,32 +11,32 @@ type LogicBrick struct {
 	name     string
 	workers  chan bool
 	wg       sync.WaitGroup
-	kernal   func(*Message) (*Message, error)
-	errQueue chan *ErrMessage
-	outQueue chan *Message
+	kernal   func(interface{}) (interface{}, error)
+	errQueue chan interface{}
+	outQueue chan interface{}
 }
 
 func (b *LogicBrick) Name() string {
 	return b.name
 }
 
-func (b *LogicBrick) Linked(inQueue <-chan *Message) {
+func (b *LogicBrick) Linked(inQueue <-chan interface{}) {
 	b.loop(inQueue)
 }
 
-func (b *LogicBrick) Output() <-chan *Message {
+func (b *LogicBrick) Output() <-chan interface{} {
 	return b.outQueue
 }
 
-func (b *LogicBrick) Errors() <-chan *ErrMessage {
+func (b *LogicBrick) Errors() <-chan interface{} {
 	return b.errQueue
 }
 
-func (b *LogicBrick) loop(inQueue <-chan *Message) {
+func (b *LogicBrick) loop(inQueue <-chan interface{}) {
 	for msg := range inQueue {
 		<-b.workers
 		b.wg.Add(1)
-		go func(msg *Message) {
+		go func(msg interface{}) {
 			defer func() {
 				b.wg.Done()
 				b.workers <- true
@@ -44,15 +44,14 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 			res, err := async.Lambda(func() (interface{}, error) {
 				return b.kernal(msg)
 			}, 0)
-			if err != nil {
-				b.errQueue <- &ErrMessage{
-					Name:   b.name,
-					Raw:    msg.Raw,
-					Reason: err.Error(),
-				}
-			} else {
-				b.outQueue <- res.(*Message)
+			if err == nil {
+				b.outQueue <- res
 			}
+				// b.errQueue <- &ErrMessage{
+				// 	Path:   b.Name(),
+				// 	Raw:    msg.Raw,
+				// 	Reason: err.Error(),
+				// }
 		}(msg)
 	}
 	b.wg.Wait()
@@ -62,7 +61,7 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 
 func NewLogicBrick(
 	name string,
-	kernal func(*Message) (*Message, error),
+	kernal func(interface{}) (interface{}, error),
 	max_worker int,
 	chanSize int) *LogicBrick {
 	if max_worker <= 1 {
@@ -75,8 +74,8 @@ func NewLogicBrick(
 		name:     name,
 		kernal:   kernal,
 		workers:  make(chan bool, max_worker),
-		outQueue: make(chan *Message, chanSize),
-		errQueue: make(chan *ErrMessage, 16),
+		outQueue: make(chan interface{}, chanSize),
+		errQueue: make(chan interface{}, 16),
 	}
 	for i := 0; i < max_worker; i++ {
 		l.workers <- true

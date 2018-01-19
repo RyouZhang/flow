@@ -8,7 +8,7 @@ type Board struct {
 	name       string
 	wg         sync.WaitGroup
 	bricks     map[string]IBrick
-	errHandler func(*ErrMessage)
+	errHandler func(interface{})
 }
 
 func NewBoard(name string) *Board {
@@ -18,7 +18,7 @@ func NewBoard(name string) *Board {
 	}
 }
 
-func (b *Board) SetErrHandler(errHandler func(*ErrMessage)) {
+func (b *Board) SetErrHandler(errHandler func(interface{})) {
 	b.errHandler = errHandler
 }
 
@@ -74,7 +74,7 @@ func (b *Board) Stop() {
 	b.wg.Wait()
 }
 
-func (b *Board) onError(inQueue <-chan *ErrMessage) {
+func (b *Board) onError(inQueue <-chan interface{}) {
 	for msg := range inQueue {
 		if b.errHandler != nil {
 			b.errHandler(msg)

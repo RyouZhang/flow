@@ -8,18 +8,18 @@ type MergeBrick struct {
 	name     string
 	once     sync.Once
 	wg       sync.WaitGroup
-	outQueue chan *Message
+	outQueue chan interface{}
 }
 
 func (b *MergeBrick) Name() string {
 	return b.name
 }
 
-func (b *MergeBrick) Output() <-chan *Message {
+func (b *MergeBrick) Output() <-chan interface{} {
 	return b.outQueue
 }
 
-func (b *MergeBrick) Linked(inQueue <-chan *Message) {
+func (b *MergeBrick) Linked(inQueue <-chan interface{}) {
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
@@ -36,5 +36,5 @@ func (b *MergeBrick) Linked(inQueue <-chan *Message) {
 func NewMergeBrick(name string, chanSize int) *MergeBrick {
 	return &MergeBrick{
 		name:     name,
-		outQueue: make(chan *Message, chanSize)}
+		outQueue: make(chan interface{}, chanSize)}
 }

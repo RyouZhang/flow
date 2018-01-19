@@ -6,23 +6,23 @@ import (
 
 type OutputBrick struct {
 	name     string
-	kernal   func(<-chan *Message, chan<- *ErrMessage)
-	errQueue chan *ErrMessage
+	kernal   func(<-chan interface{}, chan<- interface{})
+	errQueue chan interface{}
 }
 
 func (b *OutputBrick) Name() string {
 	return b.name
 }
 
-func (b *OutputBrick) Linked(inQueue <-chan *Message) {
+func (b *OutputBrick) Linked(inQueue <-chan interface{}) {
 	b.loop(inQueue)
 }
 
-func (b *OutputBrick) Errors() <-chan *ErrMessage {
+func (b *OutputBrick) Errors() <-chan interface{} {
 	return b.errQueue
 }
 
-func (b *OutputBrick) loop(inQueue <-chan *Message) {
+func (b *OutputBrick) loop(inQueue <-chan interface{}) {
 	defer func() {
 		close(b.errQueue)
 	}()
@@ -38,10 +38,10 @@ Start:
 
 func NewOutputBrick(
 	name string,
-	kernal func(<-chan *Message, chan<- *ErrMessage)) *OutputBrick {
+	kernal func(<-chan interface{}, chan<- interface{})) *OutputBrick {
 	return &OutputBrick{
 		name:     name,
 		kernal:   kernal,
-		errQueue: make(chan *ErrMessage, 16),
+		errQueue: make(chan interface{}, 16),
 	}
 }

@@ -1,23 +1,11 @@
 package flow
 
-type Message struct {
-	Id     string		//MD5 Raw Is A Good Choose!
-	Raw    []byte
-	Object map[string]interface{}
-}
-
-type ErrMessage struct {
-	Name   string
-	Raw    []byte
-	Reason string
-}
-
 type IBrick interface {
 	Name() string
 }
 
 type IInput interface {
-	Linked(<-chan *Message)
+	Linked(<-chan interface{})
 }
 
 type IEntry interface {
@@ -26,9 +14,9 @@ type IEntry interface {
 }
 
 type IOutput interface {
-	Output() <-chan *Message
+	Output() <-chan interface{}
 }
 
 type IError interface {
-	Errors() <-chan *ErrMessage
+	Errors() <-chan interface{}
 }
