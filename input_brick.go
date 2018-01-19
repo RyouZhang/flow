@@ -6,7 +6,7 @@ import (
 
 type InputBrick struct {
 	name     string
-	kernal   func(chan<- interface{}, <-chan bool)
+	kernal   func(chan<- interface{}, chan<- error, <-chan bool)
 	shutdown chan bool
 	errQueue chan error
 	outQueue chan interface{}
@@ -37,7 +37,7 @@ func (b *InputBrick) loop() {
 	defer close(b.outQueue)
 Start:
 	_, err := async.Lambda(func() (interface{}, error) {
-		b.kernal(b.outQueue, b.shutdown)
+		b.kernal(b.outQueue, b.errQueue, b.shutdown)
 		return nil, nil
 	}, 0)
 	if err != nil {
@@ -48,7 +48,7 @@ Start:
 
 func NewInputBrick(
 	name string,
-	kernal func(chan<- interface{}, <-chan bool),
+	kernal func(chan<- interface{}, chan<- error, <-chan bool),
 	chanSize int) *InputBrick {
 	return &InputBrick{
 		name:     name,
