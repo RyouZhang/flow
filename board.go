@@ -9,21 +9,16 @@ type Board struct {
 	wg         sync.WaitGroup
 	bricks     map[string]IBrick
 	errHandler func(*ErrMessage)
-	logHandler func(*LogMessage)
 }
 
 func NewBoard(name string) *Board {
 	return &Board{
-		name: name, 
+		name:   name,
 		bricks: make(map[string]IBrick),
 	}
 }
 
-func (b *Board)SetLogHandler(logHandler func(*LogMessage)) {
-	b.logHandler = logHandler
-}
-
-func (b *Board)SetErrHandler(errHandler func(*ErrMessage)) {
+func (b *Board) SetErrHandler(errHandler func(*ErrMessage)) {
 	b.errHandler = errHandler
 }
 
@@ -35,9 +30,6 @@ func (b *Board) AddBricks(bricks ...IBrick) {
 
 			if _, ok := brick.(IError); ok {
 				go b.onError(brick.(IError).Errors())
-			}
-			if _, ok := brick.(ILogs); ok {
-				go b.onLog(brick.(ILogs).Logs())
 			}
 		}
 	}
@@ -86,14 +78,6 @@ func (b *Board) onError(inQueue <-chan *ErrMessage) {
 	for msg := range inQueue {
 		if b.errHandler != nil {
 			b.errHandler(msg)
-		}
-	}
-}
-
-func (b *Board) onLog(inQueue <-chan *LogMessage) {
-	for msg := range inQueue {
-		if b.logHandler != nil {
-			b.logHandler(msg)
 		}
 	}
 }

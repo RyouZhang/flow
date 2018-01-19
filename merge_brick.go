@@ -6,7 +6,7 @@ import (
 
 type MergeBrick struct {
 	name     string
-	once		sync.Once
+	once     sync.Once
 	wg       sync.WaitGroup
 	outQueue chan *Message
 }
@@ -27,7 +27,7 @@ func (b *MergeBrick) Linked(inQueue <-chan *Message) {
 			b.outQueue <- msg
 		}
 	}()
-	go b.once.Do(func(){
+	go b.once.Do(func() {
 		b.wg.Wait()
 		close(b.outQueue)
 	})

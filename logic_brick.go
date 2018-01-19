@@ -12,7 +12,6 @@ type LogicBrick struct {
 	workers  chan bool
 	wg       sync.WaitGroup
 	kernal   func(*Message) (*Message, error)
-	logQueue chan *LogMessage
 	errQueue chan *ErrMessage
 	outQueue chan *Message
 }
@@ -29,12 +28,8 @@ func (b *LogicBrick) Output() <-chan *Message {
 	return b.outQueue
 }
 
-func (b *LogicBrick)Errors() <-chan *ErrMessage {
+func (b *LogicBrick) Errors() <-chan *ErrMessage {
 	return b.errQueue
-}
-
-func (b *LogicBrick)Logs() <-chan *LogMessage {
-	return b.logQueue
 }
 
 func (b *LogicBrick) loop(inQueue <-chan *Message) {
@@ -46,13 +41,13 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 				b.wg.Done()
 				b.workers <- true
 			}()
-			res, err := async.Lambda(func()(interface{}, error){
+			res, err := async.Lambda(func() (interface{}, error) {
 				return b.kernal(msg)
-			}, 0)			
+			}, 0)
 			if err != nil {
 				b.errQueue <- &ErrMessage{
-					Name: b.name,
-					Raw: msg.Raw,
+					Name:   b.name,
+					Raw:    msg.Raw,
 					Reason: err.Error(),
 				}
 			} else {
@@ -63,7 +58,6 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 	b.wg.Wait()
 	close(b.outQueue)
 	close(b.errQueue)
-	close(b.logQueue)
 }
 
 func NewLogicBrick(
@@ -82,7 +76,6 @@ func NewLogicBrick(
 		kernal:   kernal,
 		workers:  make(chan bool, max_worker),
 		outQueue: make(chan *Message, chanSize),
-		logQueue: make(chan *LogMessage, 16),
 		errQueue: make(chan *ErrMessage, 16),
 	}
 	for i := 0; i < max_worker; i++ {
