@@ -1,41 +1,9 @@
 package flow
 
-import (
-	"reflect"
-
-	"github.com/ugorji/go/codec"
-)
-
-var (
-	bh codec.BincHandle
-)
-
-func init() {
-	bh.MapType = reflect.TypeOf(map[string]interface{}(nil))
-}
-
-func deepCopy(source interface{}) (interface{}, error) {
-	var (
-		err error
-		raw []byte
-	)
-	enc := codec.NewEncoderBytes(&raw, &bh)
-	err = enc.Encode(source)
-	if err != nil {
-		return nil, err
-	}
-	target := reflect.New(reflect.TypeOf(source)).Interface()
-	dec := codec.NewDecoderBytes(raw, &bh)
-	err = dec.Decode(target)
-	if err != nil {
-		return nil, err
-	}
-	return target, nil
-}
 
 type SplitBrick struct {
 	name      string
-	deepCopy  bool
+	deepCopy  func(interface{}) (interface{}, error)
 	chanSize  int
 	errQueue  chan error
 	outQueues []chan interface{}
@@ -62,8 +30,8 @@ func (b *SplitBrick) Succeed() <-chan interface{} {
 func (b *SplitBrick) loop(inQueue <-chan interface{}) {
 	for msg := range inQueue {
 		for _, output := range b.outQueues {
-			if b.deepCopy {
-				temp, err := deepCopy(msg)
+			if b.deepCopy != nil {
+				temp, err := b.deepCopy(msg)
 				if err != nil {
 					b.errQueue <- err
 					break
@@ -79,7 +47,10 @@ func (b *SplitBrick) loop(inQueue <-chan interface{}) {
 	}
 }
 
-func NewSplitBrick(name string, deepCopy bool, chanSize int) *SplitBrick {
+func NewSplitBrick(
+	name string, 
+	deepCopy func(interface{})(interface{}, error), 
+	chanSize int) *SplitBrick {
 	return &SplitBrick{
 		name:      name,
 		deepCopy:  deepCopy,
