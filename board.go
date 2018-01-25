@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"fmt"
 	"errors"
 	"sync"
 )
@@ -28,7 +29,7 @@ func (b *Board) SetFailedHandler(failedHanlder func(string, interface{})) {
 	b.failedHanlder = failedHanlder
 }
 
-func (b *Board) AddBricks(bricks ...IBrick) {
+func (b *Board) Add(bricks ...IBrick) *Board {
 	for _, brick := range bricks {
 		_, ok := b.bricks[brick.Name()]
 		if false == ok {
@@ -44,9 +45,23 @@ func (b *Board) AddBricks(bricks ...IBrick) {
 			panic(errors.New("Duplicate Brick Name:" + brick.(IBrick).Name()))
 		}
 	}
+	return b
 }
 
-func (b *Board) Connect(out ISucceed, in IInput) {
+func (b *Board) Connect(outName string, inName string) *Board {
+	out, ok := b.bricks[outName]
+	if false == ok {
+		panic(errors.New(fmt.Sprintf("Invalid Brick %s", outName)))
+	}	
+	in, ok := b.bricks[inName]
+	if false == ok {
+		panic(errors.New(fmt.Sprintf("Invalid Brick %s", inName)))
+	}
+	b.connectBrick(out.(ISucceed), in.(IInput))
+	return b
+}
+
+func (b *Board) connectBrick(out ISucceed, in IInput) {
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
