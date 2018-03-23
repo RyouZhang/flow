@@ -34,7 +34,10 @@ func (b *InputBrick) Stop() {
 }
 
 func (b *InputBrick) loop() {
-	defer close(b.outQueue)
+	defer func() {
+		close(b.errQueue)
+		close(b.outQueue)
+	}()
 Start:
 	_, err := async.Lambda(func() (interface{}, error) {
 		b.kernal(b.outQueue, b.errQueue, b.shutdown)
