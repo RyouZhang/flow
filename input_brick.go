@@ -6,17 +6,17 @@ import (
 
 type InputBrick struct {
 	name     string
-	kernal   func(chan<- interface{}, chan<- error, <-chan bool)
+	kernal   func(chan<- *Message, chan<- error, <-chan bool)
 	shutdown chan bool
 	errQueue chan error
-	outQueue chan interface{}
+	outQueue chan *Message
 }
 
 func (b *InputBrick) Name() string {
 	return b.name
 }
 
-func (b *InputBrick) Succeed() <-chan interface{} {
+func (b *InputBrick) Output() <-chan *Message {
 	return b.outQueue
 }
 
@@ -51,13 +51,13 @@ Start:
 
 func NewInputBrick(
 	name string,
-	kernal func(chan<- interface{}, chan<- error, <-chan bool),
+	kernal func(chan<- *Message, chan<- error, <-chan bool),
 	chanSize int) *InputBrick {
 	return &InputBrick{
 		name:     name,
 		kernal:   kernal,
 		shutdown: make(chan bool),
 		errQueue: make(chan error, 8),
-		outQueue: make(chan interface{}, chanSize),
+		outQueue: make(chan *Message, chanSize),
 	}
 }

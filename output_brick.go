@@ -5,17 +5,16 @@ import (
 )
 
 type OutputBrick struct {
-	name      string
-	kernal    func(<-chan interface{}, chan<- interface{}, chan<- error)
-	errQueue  chan error
-	failQueue chan interface{}
+	name     string
+	kernal   func(*Message) error
+	errQueue chan error
 }
 
 func (b *OutputBrick) Name() string {
 	return b.name
 }
 
-func (b *OutputBrick) Linked(inQueue <-chan interface{}) {
+func (b *OutputBrick) Linked(inQueue <-chan *Message) {
 	b.loop(inQueue)
 }
 
@@ -23,31 +22,27 @@ func (b *OutputBrick) Errors() <-chan error {
 	return b.errQueue
 }
 
-func (b *OutputBrick) Failed() <-chan interface{} {
-	return b.failQueue
-}
-
-func (b *OutputBrick) loop(inQueue <-chan interface{}) {
+func (b *OutputBrick) loop(inQueue <-chan *Message) {
 	defer func() {
 		close(b.errQueue)
 	}()
-Start:
-	_, err := async.Lambda(func() (interface{}, error) {
-		b.kernal(inQueue, b.failQueue, b.errQueue)
-		return nil, nil
-	}, 0)
-	if err != nil {
-		goto Start
+	for msg := range inQueue {
+		_, err := async.Safety(func() (interface{}, error) {
+			err := b.kernal(msg)
+			return nil, err
+		})
+		if err != nil {
+			b.errQueue <- err
+		}
 	}
 }
 
 func NewOutputBrick(
 	name string,
-	kernal func(<-chan interface{}, chan<- interface{}, chan<- error)) *OutputBrick {
+	kernal func(*Message) error) *OutputBrick {
 	return &OutputBrick{
-		name:      name,
-		kernal:    kernal,
-		failQueue: make(chan interface{}, 8),
-		errQueue:  make(chan error, 8),
+		name:     name,
+		kernal:   kernal,
+		errQueue: make(chan error, 8),
 	}
 }

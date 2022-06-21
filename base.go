@@ -1,11 +1,15 @@
 package flow
 
+import (
+	"context"
+)
+
 type IBrick interface {
 	Name() string
 }
 
 type IInput interface {
-	Linked(<-chan interface{})
+	Linked(<-chan *Message)
 }
 
 type IEntry interface {
@@ -13,14 +17,16 @@ type IEntry interface {
 	Stop()
 }
 
-type ISucceed interface {
-	Succeed() <-chan interface{}
-}
-
-type IFailed interface {
-	Failed() <-chan interface{}
+type IOutput interface {
+	Output() <-chan *Message
 }
 
 type IError interface {
 	Errors() <-chan error
+}
+
+type Message struct {
+	Ctx     context.Context
+	Headers map[string]string
+	Raw     interface{}
 }

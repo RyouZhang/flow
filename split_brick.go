@@ -1,19 +1,18 @@
 package flow
 
-
 type SplitBrick struct {
 	name      string
-	deepCopy  func(interface{}) (interface{}, error)
+	deepCopy  func(*Message) (*Message, error)
 	chanSize  int
 	errQueue  chan error
-	outQueues []chan interface{}
+	outQueues []chan *Message
 }
 
 func (b *SplitBrick) Name() string {
 	return b.name
 }
 
-func (b *SplitBrick) Linked(inQueue <-chan interface{}) {
+func (b *SplitBrick) Linked(inQueue <-chan *Message) {
 	go b.loop(inQueue)
 }
 
@@ -21,13 +20,13 @@ func (b *SplitBrick) Errors() <-chan error {
 	return b.errQueue
 }
 
-func (b *SplitBrick) Succeed() <-chan interface{} {
-	output := make(chan interface{}, b.chanSize)
+func (b *SplitBrick) Output() <-chan *Message {
+	output := make(chan *Message, b.chanSize)
 	b.outQueues = append(b.outQueues, output)
 	return output
 }
 
-func (b *SplitBrick) loop(inQueue <-chan interface{}) {
+func (b *SplitBrick) loop(inQueue <-chan *Message) {
 	for msg := range inQueue {
 		for _, output := range b.outQueues {
 			if b.deepCopy != nil {
@@ -48,14 +47,14 @@ func (b *SplitBrick) loop(inQueue <-chan interface{}) {
 }
 
 func NewSplitBrick(
-	name string, 
-	deepCopy func(interface{})(interface{}, error), 
+	name string,
+	deepCopy func(*Message) (*Message, error),
 	chanSize int) *SplitBrick {
 	return &SplitBrick{
 		name:      name,
 		deepCopy:  deepCopy,
 		chanSize:  chanSize,
-		outQueues: make([]chan interface{}, 0),
+		outQueues: make([]chan *Message, 0),
 		errQueue:  make(chan error, 8),
 	}
 }
