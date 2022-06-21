@@ -11,7 +11,7 @@ type LogicBrick struct {
 	name     string
 	workers  chan bool
 	wg       sync.WaitGroup
-	kernal   func(*Message) (*Message, error)
+	kernal   func(*Message, chan<- *Message) error
 	errQueue chan error
 	outQueue chan *Message
 }
@@ -41,13 +41,12 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 				b.wg.Done()
 				<-b.workers
 			}()
-			res, err := async.Lambda(func() (interface{}, error) {
-				return b.kernal(msg)
-			}, 0)
+			_, err := async.Safety(func() (interface{}, error) {
+				err := b.kernal(msg, b.outQueue)
+				return nil, err
+			})
 			if err != nil {
 				b.errQueue <- err
-			} else {
-				b.outQueue <- res.(*Message)
 			}
 		}(msg)
 	}
@@ -58,7 +57,7 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 
 func NewLogicBrick(
 	name string,
-	kernal func(*Message) (*Message, error),
+	kernal func(*Message, chan<- *Message) error,
 	max_worker int,
 	chanSize int) *LogicBrick {
 	if max_worker <= 1 {
