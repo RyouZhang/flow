@@ -55,6 +55,6 @@ func (m *Message) Context() context.Context {
 	return m.ctx
 }
 
-func (m *Message) TimeStamp() int64 {
+func (m *Message) Timestamp() int64 {
 	return m.ts.UnixMilli()
 }
