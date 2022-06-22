@@ -28,5 +28,5 @@ type IError interface {
 type Message struct {
 	Ctx     context.Context
 	Headers map[string]string
-	Raw     interface{}
+	Data    interface{}
 }
