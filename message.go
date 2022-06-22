@@ -2,16 +2,22 @@ package flow
 
 import (
 	"context"
+	"time"
 )
 
 type Message struct {
 	ctx     context.Context
 	headers map[string]string
 	data    interface{}
+	ts      time.Time
 }
 
 func NewMessage(ctx context.Context) *Message {
-	return &Message{ctx: ctx, headers: make(map[string]string)}
+	return &Message{
+		ctx:     ctx,
+		headers: make(map[string]string),
+		ts:      time.Now(),
+	}
 }
 
 func (m *Message) AddHeader(key string, val string) *Message {
@@ -47,4 +53,8 @@ func (m *Message) SetContext(ctx context.Context) *Message {
 
 func (m *Message) Context() context.Context {
 	return m.ctx
+}
+
+func (m *Message) TimeStamp() int64 {
+	return m.ts.UnixMilli()
 }
