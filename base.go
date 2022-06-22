@@ -1,9 +1,5 @@
 package flow
 
-import (
-	"context"
-)
-
 type IBrick interface {
 	Name() string
 }
@@ -23,10 +19,4 @@ type IOutput interface {
 
 type IError interface {
 	Errors() <-chan error
-}
-
-type Message struct {
-	Ctx     context.Context
-	Headers map[string]string
-	Data    interface{}
 }
