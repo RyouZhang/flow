@@ -7,6 +7,7 @@ import (
 type OutputBrick struct {
 	name     string
 	kernal   func(*Message) error
+	gracefulStop func()
 	errQueue chan error
 }
 
@@ -35,11 +36,15 @@ func (b *OutputBrick) loop(inQueue <-chan *Message) {
 			b.errQueue <- err
 		}
 	}
+	if b.gracefulStop != nil {
+		b.gracefulStop()
+	}
 }
 
 func NewOutputBrick(
 	name string,
-	kernal func(*Message) error) *OutputBrick {
+	kernal func(*Message) error,
+	gracefulStop func()) *OutputBrick {
 	return &OutputBrick{
 		name:     name,
 		kernal:   kernal,
