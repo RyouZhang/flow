@@ -5,10 +5,10 @@ import (
 )
 
 type OutputBrick struct {
-	name     string
-	kernal   func(*Message) error
+	name         string
+	kernal       func(*Message) error
 	gracefulStop func()
-	errQueue chan error
+	errQueue     chan error
 }
 
 func (b *OutputBrick) Name() string {
