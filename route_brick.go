@@ -44,8 +44,8 @@ func (b *RouteBrick) loop(inQueue <-chan *Message) {
 				continue
 			}
 			_, err := async.Safety(func() (interface{}, error) {
-				if b.method(msg) {
-					b.outQueue <- msg
+				if item.method(msg) {
+					item.outQueue <- msg
 				}
 				return nil, nil
 			})
