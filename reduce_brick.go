@@ -1,8 +1,7 @@
 package flow
 
 import (
-	"runtime"
-	"sync"
+	"time"
 
 	"github.com/RyouZhang/async-go"
 )
@@ -47,16 +46,14 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 				for i, key := range b.msgKeys {
 					target, ok := b.msgDic[key]
 					if !ok {
-						delKeyDic[key] = true
 						index = i
 						continue
 					}
-					if target[0].Timestamp()+b.windowSeconds <= ts.UnixMilli() {
-						delKeyDic[key] = true
+					if target[0].Timestamp()+int64(b.windowSeconds*1000) <= ts.UnixMilli() {
 						index = i
 
 						res, err := async.Safety(func() (interface{}, error) {
-							return b.reduce(target...)			
+							return b.reduce(target...)
 						})
 						if err != nil {
 							b.errQueue <- err
@@ -89,7 +86,7 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 						b.msgKeys = b.msgKeys[index+1:]
 					}
 				}
-				timer.Reset()
+				timer.Reset(500 * time.Millisecond)
 			}
 		case msg, ok := <-inQueue:
 			{
@@ -101,17 +98,19 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 					b.outQueue <- msg
 					continue
 				}
-				key, err := async.Safety(func() (interface{}, error) {
+				res, err := async.Safety(func() (interface{}, error) {
 					key := b.mapping(msg)
 					return key, nil
 				})
 				if err != nil {
 					b.errQueue <- err
 				}
+				key := res.(string)
+
 				_, ok := b.msgDic[key]
 				if false == ok {
 					b.msgDic[key] = []*Message{msg}
-					b.msgKeys = append(b.msgKeys, msg)
+					b.msgKeys = append(b.msgKeys, key)
 				} else {
 					b.msgDic[key] = append(b.msgDic[key], msg)
 				}
@@ -124,7 +123,7 @@ End:
 			return b.reduce(target...)
 		})
 		if err != nil {
-			b.errQueue <- err		
+			b.errQueue <- err
 		} else {
 			b.outQueue <- res.(*Message)
 		}
@@ -137,7 +136,7 @@ func NewReduceBrick(
 	name string,
 	windowSeconds int,
 	mapping func(*Message) string,
-	reduce func(...*Message) error,
+	reduce func(...*Message) (*Message, error),
 	chanSize int) *ReduceBrick {
 	l := &ReduceBrick{
 		name:          name,
@@ -145,7 +144,7 @@ func NewReduceBrick(
 		mapping:       mapping,
 		reduce:        reduce,
 		msgKeys:       make([]string, 0),
-		msgDic:        make(map[string]*Message),
+		msgDic:        make(map[string][]*Message),
 		outQueue:      make(chan *Message, chanSize),
 		errQueue:      make(chan error, 8),
 	}
