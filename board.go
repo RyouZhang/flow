@@ -61,6 +61,23 @@ func (b *Board) connectBrick(out IOutput, in IInput) {
 	}()
 }
 
+func (b *Board) RouteConnect(outName string, route func(*Message) bool, inName string) *Board {
+	out, ok := b.bricks[outName]
+	if false == ok {
+		panic(errors.New(fmt.Sprintf("Invalid Brick %s", outName)))
+	}
+	in, ok := b.bricks[inName]
+	if false == ok {
+		panic(errors.New(fmt.Sprintf("Invalid Brick %s", inName)))
+	}
+	b.wg.Add(1)
+	go func() {
+		defer b.wg.Done()
+		in.Linked(out.RouteOutput(method))
+	}()
+	return b
+}
+
 func (b *Board) Start() {
 	for _, brick := range b.bricks {
 		ob, ok := brick.(IEntry)

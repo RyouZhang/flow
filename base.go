@@ -20,3 +20,7 @@ type IOutput interface {
 type IError interface {
 	Errors() <-chan error
 }
+
+type IRoute interface {
+	RouteOutput(func(*Message) bool) <-chan *Message
+}
