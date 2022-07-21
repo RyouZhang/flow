@@ -63,9 +63,6 @@ func NewLogicBrick(
 	if max_worker <= 1 {
 		max_worker = 1
 	}
-	if max_worker > runtime.NumCPU() {
-		max_worker = runtime.NumCPU()
-	}
 	l := &LogicBrick{
 		name:     name,
 		kernal:   kernal,
