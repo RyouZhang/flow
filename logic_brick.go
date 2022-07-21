@@ -1,7 +1,6 @@
 package flow
 
 import (
-	"runtime"
 	"sync"
 
 	"github.com/RyouZhang/async-go"
@@ -62,7 +61,7 @@ func NewLogicBrick(
 	chanSize int) *LogicBrick {
 	if max_worker <= 1 {
 		max_worker = 1
-	}
+	}x
 	l := &LogicBrick{
 		name:     name,
 		kernal:   kernal,
