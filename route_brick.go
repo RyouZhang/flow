@@ -50,12 +50,13 @@ func (b *RouteBrick) loop(inQueue <-chan *Message) {
 				res := item.method(msg)
 				return res, nil
 			})
-			if res.(bool) {
-				item.outQueue <- msg
-				break
-			}
 			if err != nil {
 				b.errQueue <- err
+			} else {
+				if res.(bool) {
+					item.outQueue <- msg
+					break				
+				}
 			}
 		}
 	}
