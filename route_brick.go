@@ -21,7 +21,7 @@ func (b *RouteBrick) Name() string {
 }
 
 func (b *RouteBrick) Linked(inQueue <-chan *Message) {
-	go b.loop(inQueue)
+	b.loop(inQueue)
 }
 
 func (b *RouteBrick) Errors() <-chan error {
@@ -38,6 +38,9 @@ func (b *RouteBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
 }
 
 func (b *RouteBrick) loop(inQueue <-chan *Message) {
+	defer func() {
+		close(b.errQueue)
+	}()
 	for msg := range inQueue {
 		for _, item := range b.outQueues {
 			if item.method == nil {
