@@ -1,5 +1,11 @@
 package flow
 
+import (
+	"sync"
+)
+
+var splitBrickLock sync.Mutex
+
 type SplitBrick struct {
 	name      string
 	deepCopy  func(*Message) (*Message, error)
@@ -21,6 +27,9 @@ func (b *SplitBrick) Errors() <-chan error {
 }
 
 func (b *SplitBrick) Output() <-chan *Message {
+	splitBrickLock.Lock()
+	defer splitBrickLock.Unlock()
+	
 	output := make(chan *Message, b.chanSize)
 	b.outQueues = append(b.outQueues, output)
 	return output
