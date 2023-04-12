@@ -32,6 +32,7 @@ func (b *SplitBrick) Output() <-chan *Message {
 	
 	output := make(chan *Message, b.chanSize)
 	b.outQueues = append(b.outQueues, output)
+	
 	return output
 }
 
