@@ -1,8 +1,12 @@
 package flow
 
 import (
+	"sync"
+	
 	"github.com/RyouZhang/async-go"
 )
+
+var routeBrickLock sync.Mutex
 
 type routeItem struct {
 	method   func(*Message) bool
@@ -29,6 +33,9 @@ func (b *RouteBrick) Errors() <-chan error {
 }
 
 func (b *RouteBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
+	routeBrickLock.Lock()
+	defer routeBrickLock.Unlock()
+	
 	output := make(chan *Message, b.chanSize)
 	b.outQueues = append(b.outQueues, &routeItem{
 		method:   method,
