@@ -55,7 +55,7 @@ func (b *RouteBrick) loop(inQueue <-chan *Message) {
 			} else {
 				if res.(bool) {
 					item.outQueue <- msg
-					break				
+					break
 				}
 			}
 		}

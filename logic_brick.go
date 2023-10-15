@@ -7,32 +7,61 @@ import (
 )
 
 type LogicBrick struct {
-	name     string
-	workers  chan bool
-	wg       sync.WaitGroup
-	kernal   func(*Message, chan<- *Message) error
-	errQueue chan error
-	outQueue chan *Message
+	name    string
+	workers chan bool
+	wg      sync.WaitGroup
+	kernal  func(*Message, chan<- *Message) error
+
+	// support merge
+	inMux    sync.WaitGroup
+	inOnce   sync.Once
+	inQueue  chan *Message
+	resQueue chan *Message
+
+	// support route
+	chanSize  int
+	outQueues []*routeItem
+	outQueue  chan *Message
+	errQueue  chan error
 }
 
 func (b *LogicBrick) Name() string {
 	return b.name
 }
 
-func (b *LogicBrick) Linked(inQueue <-chan *Message) {
-	b.loop(inQueue)
+func (b *LogicBrick) Linked(queue <-chan *Message) {
+	b.inMux.Add(1)
+	go func() {
+		defer b.inMux.Done()
+		for msg := range queue {
+			b.inQueue <- msg
+		}
+	}()
+	go b.inOnce.Do(func() {
+		b.inMux.Wait()
+		close(b.inQueue)
+	})
 }
 
 func (b *LogicBrick) Output() <-chan *Message {
 	return b.outQueue
 }
 
+func (b *LogicBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
+	output := make(chan *Message, b.chanSize)
+	b.outQueues = append(b.outQueues, &routeItem{
+		method:   method,
+		outQueue: output,
+	})
+	return output
+}
+
 func (b *LogicBrick) Errors() <-chan error {
 	return b.errQueue
 }
 
-func (b *LogicBrick) loop(inQueue <-chan *Message) {
-	for msg := range inQueue {
+func (b *LogicBrick) loop() {
+	for msg := range b.inQueue {
 		b.workers <- true
 		b.wg.Add(1)
 		go func(msg *Message) {
@@ -41,7 +70,7 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 				<-b.workers
 			}()
 			_, err := async.Safety(func() (interface{}, error) {
-				err := b.kernal(msg, b.outQueue)
+				err := b.kernal(msg, b.resQueue)
 				return nil, err
 			})
 			if err != nil {
@@ -50,6 +79,40 @@ func (b *LogicBrick) loop(inQueue <-chan *Message) {
 		}(msg)
 	}
 	b.wg.Wait()
+	close(b.resQueue)
+}
+
+func (b *LogicBrick) pump() {
+	for msg := range b.resQueue {
+		flag := false
+		for _, item := range b.outQueues {
+			if item.method == nil {
+				continue
+			}
+			res, err := async.Safety(func() (interface{}, error) {
+				res := item.method(msg)
+				return res, nil
+			})
+			if err != nil {
+				b.errQueue <- err
+			} else {
+				if res.(bool) {					
+					flag = true
+					item.outQueue <- msg
+					break
+				}
+			}
+		}
+		if false == flag {
+			select {
+			case b.outQueue <- msg:
+			default:
+			}
+		}
+	}
+	for _, item := range b.outQueues {
+		close(item.outQueue)
+	}
 	close(b.outQueue)
 	close(b.errQueue)
 }
@@ -63,11 +126,17 @@ func NewLogicBrick(
 		max_worker = 1
 	}
 	l := &LogicBrick{
-		name:     name,
-		kernal:   kernal,
-		workers:  make(chan bool, max_worker),
-		outQueue: make(chan *Message, chanSize),
-		errQueue: make(chan error, 8),
+		name:      name,
+		kernal:    kernal,
+		chanSize: chanSize,
+		workers:   make(chan bool, max_worker),
+		outQueue:  make(chan *Message, chanSize),
+		errQueue:  make(chan error, 8),
+		inQueue:   make(chan *Message, chanSize),
+		resQueue:  make(chan *Message, chanSize),
+		outQueues: make([]*routeItem, 0),
 	}
+	go l.loop()
+	go l.pump()
 	return l
 }

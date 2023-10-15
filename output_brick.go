@@ -46,9 +46,9 @@ func NewOutputBrick(
 	kernal func(*Message) error,
 	gracefulStop func()) *OutputBrick {
 	return &OutputBrick{
-		name:     name,
-		kernal:   kernal,
-		gracefulStop:gracefulStop,
-		errQueue: make(chan error, 8),
+		name:         name,
+		kernal:       kernal,
+		gracefulStop: gracefulStop,
+		errQueue:     make(chan error, 8),
 	}
 }
