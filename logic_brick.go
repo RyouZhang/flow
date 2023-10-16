@@ -19,10 +19,11 @@ type LogicBrick struct {
 	resQueue chan *Message
 
 	// support route
-	chanSize  int
-	outQueues []*routeItem
-	outQueue  chan *Message
-	errQueue  chan error
+	chanSize      int
+	outQueues     []*routeItem
+	useDefaultOut bool
+	outQueue      chan *Message
+	errQueue      chan error
 }
 
 func (b *LogicBrick) Name() string {
@@ -44,6 +45,7 @@ func (b *LogicBrick) Linked(queue <-chan *Message) {
 }
 
 func (b *LogicBrick) Output() <-chan *Message {
+	b.useDefaultOut = true
 	return b.outQueue
 }
 
@@ -96,18 +98,15 @@ func (b *LogicBrick) pump() {
 			if err != nil {
 				b.errQueue <- err
 			} else {
-				if res.(bool) {					
+				if res.(bool) {
 					flag = true
 					item.outQueue <- msg
 					break
 				}
 			}
 		}
-		if false == flag {
-			select {
-			case b.outQueue <- msg:
-			default:
-			}
+		if false == flag && b.useDefaultOut == true {
+			b.outQueue <- msg
 		}
 	}
 	for _, item := range b.outQueues {
@@ -126,15 +125,16 @@ func NewLogicBrick(
 		max_worker = 1
 	}
 	l := &LogicBrick{
-		name:      name,
-		kernal:    kernal,
-		chanSize: chanSize,
-		workers:   make(chan bool, max_worker),
-		outQueue:  make(chan *Message, chanSize),
-		errQueue:  make(chan error, 8),
-		inQueue:   make(chan *Message, chanSize),
-		resQueue:  make(chan *Message, chanSize),
-		outQueues: make([]*routeItem, 0),
+		name:          name,
+		kernal:        kernal,
+		chanSize:      chanSize,
+		useDefaultOut: false,
+		workers:       make(chan bool, max_worker),
+		outQueue:      make(chan *Message, chanSize),
+		errQueue:      make(chan error, 8),
+		inQueue:       make(chan *Message, chanSize),
+		resQueue:      make(chan *Message, chanSize),
+		outQueues:     make([]*routeItem, 0),
 	}
 	go l.loop()
 	go l.pump()
