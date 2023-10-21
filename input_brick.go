@@ -8,8 +8,13 @@ type InputBrick struct {
 	name     string
 	kernal   func(chan<- *Message, chan<- error, <-chan bool)
 	shutdown chan bool
-	errQueue chan error
-	outQueue chan *Message
+
+	chanSize      int
+	useDefaultOut bool
+	errQueue      chan error
+	resQueue      chan *Message
+	outQueue      chan *Message
+	outQueues     []*routeItem
 }
 
 func (b *InputBrick) Name() string {
@@ -17,7 +22,17 @@ func (b *InputBrick) Name() string {
 }
 
 func (b *InputBrick) Output() <-chan *Message {
+	b.useDefaultOut = true
 	return b.outQueue
+}
+
+func (b *InputBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
+	output := make(chan *Message, b.chanSize)
+	b.outQueues = append(b.outQueues, &routeItem{
+		method:   method,
+		outQueue: output,
+	})
+	return output
 }
 
 func (b *InputBrick) Errors() <-chan error {
@@ -35,12 +50,11 @@ func (b *InputBrick) Stop() {
 
 func (b *InputBrick) loop() {
 	defer func() {
-		close(b.errQueue)
-		close(b.outQueue)
+		close(b.resQueue)
 	}()
 Start:
 	_, err := async.Lambda(func() (interface{}, error) {
-		b.kernal(b.outQueue, b.errQueue, b.shutdown)
+		b.kernal(b.resQueue, b.errQueue, b.shutdown)
 		return nil, nil
 	}, 0)
 	if err != nil {
@@ -49,15 +63,53 @@ Start:
 	}
 }
 
+func (b *InputBrick) pump() {
+	for msg := range b.resQueue {
+		flag := false
+		for _, item := range b.outQueues {
+			if item.method == nil {
+				continue
+			}
+			res, err := async.Safety(func() (interface{}, error) {
+				res := item.method(msg)
+				return res, nil
+			})
+			if err != nil {
+				b.errQueue <- err
+			} else {
+				if res.(bool) {
+					flag = true
+					item.outQueue <- msg
+					break
+				}
+			}
+		}
+		if false == flag && b.useDefaultOut == true {
+			b.outQueue <- msg
+		}
+	}
+	for _, item := range b.outQueues {
+		close(item.outQueue)
+	}
+	close(b.outQueue)
+	close(b.errQueue)
+}
+
 func NewInputBrick(
 	name string,
 	kernal func(chan<- *Message, chan<- error, <-chan bool),
 	chanSize int) *InputBrick {
-	return &InputBrick{
-		name:     name,
-		kernal:   kernal,
-		shutdown: make(chan bool),
-		errQueue: make(chan error, 8),
-		outQueue: make(chan *Message, chanSize),
+	b := &InputBrick{
+		name:          name,
+		kernal:        kernal,
+		chanSize:      chanSize,
+		useDefaultOut: false,
+		shutdown:      make(chan bool),
+		errQueue:      make(chan error, 8),
+		resQueue:      make(chan *Message, chanSize),
+		outQueue:      make(chan *Message, chanSize),
+		outQueues:     make([]*routeItem, 0),
 	}
+	go b.pump()
+	return b
 }
