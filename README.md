@@ -1,2 +1,2 @@
 # flow
-An easy use and powerful, data process and logic flow framework
+An easy-use and powerful, data and logic process flow framework
