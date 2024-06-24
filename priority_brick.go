@@ -7,7 +7,7 @@ import (
 	"github.com/RyouZhang/async-go"
 )
 
-type PoritityBrick struct {
+type PriorityBrick struct {
 	name    string
 	workers chan bool
 	wg      sync.WaitGroup
@@ -27,23 +27,23 @@ type PoritityBrick struct {
 	errQueue      chan error
 }
 
-func (b *PoritityBrick) Name() string {
+func (b *PriorityBrick) Name() string {
 	return b.name
 }
 
-func (b *PoritityBrick) Linked(queue <-chan *Message) {
+func (b *PriorityBrick) Linked(queue <-chan *Message) {
 	b.inQueueMux.Lock()
 	defer b.inQueueMux.Unlock()
 	b.inQueues = append(b.inQueues, queue)
 	b.stopKey = b.stopKey<<1 | 1
 }
 
-func (b *PoritityBrick) Output() <-chan *Message {
+func (b *PriorityBrick) Output() <-chan *Message {
 	b.useDefaultOut = true
 	return b.outQueue
 }
 
-func (b *PoritityBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
+func (b *PriorityBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
 	output := make(chan *Message, b.chanSize)
 	b.outQueues = append(b.outQueues, &routeItem{
 		method:   method,
@@ -52,11 +52,11 @@ func (b *PoritityBrick) RouteOutput(method func(*Message) bool) <-chan *Message 
 	return output
 }
 
-func (b *PoritityBrick) Errors() <-chan error {
+func (b *PriorityBrick) Errors() <-chan error {
 	return b.errQueue
 }
 
-func (b *PoritityBrick) handler(queue <-chan *Message) error {
+func (b *PriorityBrick) handler(queue <-chan *Message) error {
 	select {
 	case msg, ok := <-queue:
 		{
@@ -85,7 +85,7 @@ func (b *PoritityBrick) handler(queue <-chan *Message) error {
 	}
 }
 
-func (b *PoritityBrick) loop() {
+func (b *PriorityBrick) loop() {
 	flagKey := 0
 	for {
 	PULL:
@@ -112,7 +112,7 @@ func (b *PoritityBrick) loop() {
 	}
 }
 
-func (b *PoritityBrick) pump() {
+func (b *PriorityBrick) pump() {
 	for msg := range b.resQueue {
 		flag := false
 		for _, item := range b.outQueues {
@@ -144,15 +144,15 @@ func (b *PoritityBrick) pump() {
 	close(b.errQueue)
 }
 
-func NewPoritityBrick(
+func NewPriorityBrick(
 	name string,
 	kernal func(*Message, chan<- *Message) error,
 	max_worker int,
-	chanSize int) *PoritityBrick {
+	chanSize int) *PriorityBrick {
 	if max_worker <= 1 {
 		max_worker = 1
 	}
-	l := &PoritityBrick{
+	l := &PriorityBrick{
 		name:          name,
 		kernal:        kernal,
 		chanSize:      chanSize,
