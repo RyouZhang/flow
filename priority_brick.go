@@ -35,7 +35,6 @@ func (b *PriorityBrick) Name() string {
 
 func (b *PriorityBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *PriorityBrick) Linked(queue <-chan *Message) {

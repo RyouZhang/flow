@@ -34,7 +34,6 @@ func (b *LogicBrick) Name() string {
 
 func (b *LogicBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *LogicBrick) Linked(queue <-chan *Message) {

@@ -19,7 +19,6 @@ func (b *OutputBrick) Name() string {
 
 func (b *OutputBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *OutputBrick) Linked(inQueue <-chan *Message) {

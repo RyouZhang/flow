@@ -35,7 +35,6 @@ func (b *ParallelBrick) Name() string {
 
 func (b *ParallelBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *ParallelBrick) Linked(queue <-chan *Message) {

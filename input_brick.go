@@ -25,7 +25,6 @@ func (b *InputBrick) Name() string {
 
 func (b *InputBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *InputBrick) Output() <-chan *Message {

@@ -26,7 +26,6 @@ func (b *ReduceBrick) Name() string {
 
 func (b *ReduceBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *ReduceBrick) Linked(inQueue <-chan *Message) {

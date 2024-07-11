@@ -24,7 +24,6 @@ func (b *RouteBrick) Name() string {
 
 func (b *RouteBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *RouteBrick) Linked(inQueue <-chan *Message) {

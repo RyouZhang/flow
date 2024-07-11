@@ -19,7 +19,6 @@ func (b *MergeBrick) Name() string {
 
 func (b *MergeBrick) AddLifeCycle(lc ILifeCycle) {
 	b.lc = lc
-	b.lc.Add(1)
 }
 
 func (b *MergeBrick) Output() <-chan *Message {

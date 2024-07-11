@@ -42,6 +42,7 @@ func (b *Board) Add(bricks ...IBrick) *Board {
 		if false == ok {
 			b.bricks[brick.Name()] = brick
 			// add life cycle
+			b.lc.Add(1)
 			brick.AddLifeCycle(b.lc)
 
 			if _, ok := brick.(IError); ok {
