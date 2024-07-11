@@ -23,7 +23,7 @@ func (b *ReduceBrick) Name() string {
 }
 
 func (b *ReduceBrick) Linked(inQueue <-chan *Message) {
-	b.loop(inQueue)
+	go b.loop(inQueue)
 }
 
 func (b *ReduceBrick) Output() <-chan *Message {

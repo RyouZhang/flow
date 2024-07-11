@@ -16,7 +16,7 @@ func (b *OutputBrick) Name() string {
 }
 
 func (b *OutputBrick) Linked(inQueue <-chan *Message) {
-	b.loop(inQueue)
+	go b.loop(inQueue)
 }
 
 func (b *OutputBrick) Errors() <-chan error {

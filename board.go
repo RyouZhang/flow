@@ -54,12 +54,12 @@ func (b *Board) Connect(outName string, inName string) *Board {
 }
 
 func (b *Board) connectBrick(out IOutput, in IInput) {
-	b.wg.Add(1)
-	target := out.Output()
-	go func() {
-		defer b.wg.Done()
-		in.Linked(target)
-	}()
+	// b.wg.Add(1)
+	// target := out.Output()
+	// go func() {
+	// 	defer b.wg.Done()
+	in.Linked(out.Output())
+	// }()
 }
 
 func (b *Board) RouteConnect(outName string, inName string, method func(*Message) bool) *Board {

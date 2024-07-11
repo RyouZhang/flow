@@ -21,7 +21,7 @@ func (b *RouteBrick) Name() string {
 }
 
 func (b *RouteBrick) Linked(inQueue <-chan *Message) {
-	b.loop(inQueue)
+	go b.loop(inQueue)
 }
 
 func (b *RouteBrick) Errors() <-chan error {
