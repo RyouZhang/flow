@@ -7,7 +7,9 @@ import (
 )
 
 type ReduceBrick struct {
-	name          string
+	name string
+	lc   ILifeCycle
+
 	windowSeconds int //sec
 	msgKeys       []string
 	msgDic        map[string][]*Message
@@ -22,8 +24,12 @@ func (b *ReduceBrick) Name() string {
 	return b.name
 }
 
+func (b *ReduceBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+}
+
 func (b *ReduceBrick) Linked(inQueue <-chan *Message) {
-	b.loop(inQueue)
+	go b.loop(inQueue)
 }
 
 func (b *ReduceBrick) Output() <-chan *Message {
@@ -130,6 +136,7 @@ End:
 	}
 	close(b.outQueue)
 	close(b.errQueue)
+	b.lc.Done()
 }
 
 func NewReduceBrick(

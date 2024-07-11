@@ -2,6 +2,7 @@ package flow
 
 type IBrick interface {
 	Name() string
+	AddLifeCycle(l ILifeCycle)
 }
 
 type IInput interface {
@@ -23,4 +24,10 @@ type IError interface {
 
 type IRoute interface {
 	RouteOutput(func(*Message) bool) <-chan *Message
+}
+
+type ILifeCycle interface {
+	Add(int)
+	Done()
+	Wait()
 }

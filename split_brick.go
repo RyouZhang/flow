@@ -1,7 +1,9 @@
 package flow
 
 type SplitBrick struct {
-	name      string
+	name string
+	lc   ILifeCycle
+
 	deepCopy  func(*Message) (*Message, error)
 	chanSize  int
 	errQueue  chan error
@@ -10,6 +12,10 @@ type SplitBrick struct {
 
 func (b *SplitBrick) Name() string {
 	return b.name
+}
+
+func (b *SplitBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
 }
 
 func (b *SplitBrick) Linked(inQueue <-chan *Message) {
@@ -27,6 +33,9 @@ func (b *SplitBrick) Output() <-chan *Message {
 }
 
 func (b *SplitBrick) loop(inQueue <-chan *Message) {
+	defer func() {
+		b.lc.Done()
+	}()
 	for msg := range inQueue {
 		for _, output := range b.outQueues {
 			if b.deepCopy != nil {
