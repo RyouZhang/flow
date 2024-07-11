@@ -10,7 +10,9 @@ type routeItem struct {
 }
 
 type RouteBrick struct {
-	name      string
+	name string
+	lc   ILifeCycle
+
 	chanSize  int
 	errQueue  chan error
 	outQueues []*routeItem
@@ -18,6 +20,11 @@ type RouteBrick struct {
 
 func (b *RouteBrick) Name() string {
 	return b.name
+}
+
+func (b *RouteBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *RouteBrick) Linked(inQueue <-chan *Message) {
@@ -40,6 +47,7 @@ func (b *RouteBrick) RouteOutput(method func(*Message) bool) <-chan *Message {
 func (b *RouteBrick) loop(inQueue <-chan *Message) {
 	defer func() {
 		close(b.errQueue)
+		b.lc.Done()
 	}()
 	for msg := range inQueue {
 		for _, item := range b.outQueues {

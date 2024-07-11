@@ -5,7 +5,9 @@ import (
 )
 
 type BaseBrick struct {
-	name     string
+	name string
+	lc   ILifeCycle
+
 	kernal   func(*Message) (*Message, error)
 	errQueue chan error
 	outQueue chan *Message
@@ -13,6 +15,11 @@ type BaseBrick struct {
 
 func (b *BaseBrick) Name() string {
 	return b.name
+}
+
+func (b *BaseBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *BaseBrick) Linked(inQueue <-chan *Message) {
@@ -31,6 +38,7 @@ func (b *BaseBrick) loop(inQueue <-chan *Message) {
 	defer func() {
 		close(b.errQueue)
 		close(b.outQueue)
+		b.lc.Done()
 	}()
 	for msg := range inQueue {
 		res, err := async.Safety(func() (interface{}, error) {

@@ -7,7 +7,9 @@ import (
 )
 
 type ParallelBrick struct {
-	name      string
+	name string
+	lc   ILifeCycle
+
 	hash      func(*Message) int
 	subQueues []chan *Message
 	wg        sync.WaitGroup
@@ -29,6 +31,11 @@ type ParallelBrick struct {
 
 func (b *ParallelBrick) Name() string {
 	return b.name
+}
+
+func (b *ParallelBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *ParallelBrick) Linked(queue <-chan *Message) {
@@ -107,6 +114,7 @@ func (b *ParallelBrick) pump() {
 	}
 	close(b.outQueue)
 	close(b.errQueue)
+	b.lc.Done()
 }
 
 func (b *ParallelBrick) worker(queue <-chan *Message) {

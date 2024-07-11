@@ -5,7 +5,9 @@ import (
 )
 
 type MergeBrick struct {
-	name     string
+	name string
+	lc   ILifeCycle
+
 	once     sync.Once
 	wg       sync.WaitGroup
 	outQueue chan *Message
@@ -15,6 +17,11 @@ func (b *MergeBrick) Name() string {
 	return b.name
 }
 
+func (b *MergeBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
+}
+
 func (b *MergeBrick) Output() <-chan *Message {
 	return b.outQueue
 }
@@ -22,7 +29,10 @@ func (b *MergeBrick) Output() <-chan *Message {
 func (b *MergeBrick) Linked(inQueue <-chan *Message) {
 	b.wg.Add(1)
 	go func() {
-		defer b.wg.Done()
+		defer func() {
+			b.wg.Done()
+			b.lc.Done()
+		}()
 		for msg := range inQueue {
 			b.outQueue <- msg
 		}

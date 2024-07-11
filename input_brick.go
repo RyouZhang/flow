@@ -5,7 +5,9 @@ import (
 )
 
 type InputBrick struct {
-	name     string
+	name string
+	lc   ILifeCycle
+
 	kernal   func(chan<- *Message, chan<- error, <-chan bool)
 	shutdown chan bool
 
@@ -19,6 +21,11 @@ type InputBrick struct {
 
 func (b *InputBrick) Name() string {
 	return b.name
+}
+
+func (b *InputBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *InputBrick) Output() <-chan *Message {
@@ -44,6 +51,9 @@ func (b *InputBrick) Start() {
 }
 
 func (b *InputBrick) Stop() {
+	defer func() {
+		b.lc.Done()
+	}()
 	b.shutdown <- true
 	close(b.shutdown)
 }

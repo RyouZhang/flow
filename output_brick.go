@@ -5,7 +5,9 @@ import (
 )
 
 type OutputBrick struct {
-	name         string
+	name string
+	lc   ILifeCycle
+
 	kernal       func(*Message) error
 	gracefulStop func()
 	errQueue     chan error
@@ -13,6 +15,11 @@ type OutputBrick struct {
 
 func (b *OutputBrick) Name() string {
 	return b.name
+}
+
+func (b *OutputBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *OutputBrick) Linked(inQueue <-chan *Message) {
@@ -26,6 +33,7 @@ func (b *OutputBrick) Errors() <-chan error {
 func (b *OutputBrick) loop(inQueue <-chan *Message) {
 	defer func() {
 		close(b.errQueue)
+		b.lc.Done()
 	}()
 	for msg := range inQueue {
 		_, err := async.Safety(func() (interface{}, error) {

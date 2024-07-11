@@ -8,15 +8,27 @@ import (
 
 type Board struct {
 	name       string
-	wg         sync.WaitGroup
 	bricks     map[string]IBrick
 	errHandler func(string, error)
+	lc         ILifeCycle
 }
 
 func NewBoard(name string) *Board {
 	return &Board{
 		name:   name,
 		bricks: make(map[string]IBrick),
+		lc:     &sync.WaitGroup{},
+	}
+}
+
+func NewBoardWithLifeCycle(name string, lc ILifeCycle) *Board {
+	if lc == nil {
+		return nil
+	}
+	return &Board{
+		name:   name,
+		bricks: make(map[string]IBrick),
+		lc:     lc,
 	}
 }
 
@@ -29,6 +41,8 @@ func (b *Board) Add(bricks ...IBrick) *Board {
 		_, ok := b.bricks[brick.Name()]
 		if false == ok {
 			b.bricks[brick.Name()] = brick
+			// add life cycle
+			brick.AddLifeCycle(b.lc)
 
 			if _, ok := brick.(IError); ok {
 				go b.onError(brick.(IBrick).Name(), brick.(IError).Errors())
@@ -49,17 +63,8 @@ func (b *Board) Connect(outName string, inName string) *Board {
 	if false == ok {
 		panic(errors.New(fmt.Sprintf("Invalid Brick %s", inName)))
 	}
-	b.connectBrick(out.(IOutput), in.(IInput))
+	in.(IInput).Linked(out.(IOutput).Output())
 	return b
-}
-
-func (b *Board) connectBrick(out IOutput, in IInput) {
-	// b.wg.Add(1)
-	// target := out.Output()
-	// go func() {
-	// 	defer b.wg.Done()
-	in.Linked(out.Output())
-	// }()
 }
 
 func (b *Board) RouteConnect(outName string, inName string, method func(*Message) bool) *Board {
@@ -71,26 +76,15 @@ func (b *Board) RouteConnect(outName string, inName string, method func(*Message
 	if false == ok {
 		panic(errors.New(fmt.Sprintf("Invalid Brick %s", inName)))
 	}
-	b.routeConnectBrick(out.(IRoute), in.(IInput), method)
+	in.(IInput).Linked(out.(IRoute).RouteOutput(method))
 	return b
-}
-
-func (b *Board) routeConnectBrick(out IRoute, in IInput, method func(*Message) bool) {
-	b.wg.Add(1)
-	target := out.RouteOutput(method)
-	go func() {
-		defer b.wg.Done()
-		in.Linked(target)
-	}()
 }
 
 func (b *Board) Start() {
 	for _, brick := range b.bricks {
 		ob, ok := brick.(IEntry)
 		if ok {
-			b.wg.Add(1)
 			go func() {
-				defer b.wg.Done()
 				ob.Start()
 			}()
 		}
@@ -104,7 +98,7 @@ func (b *Board) Stop() {
 			ob.Stop()
 		}
 	}
-	b.wg.Wait()
+	b.lc.Wait()
 }
 
 func (b *Board) onError(name string, inQueue <-chan error) {

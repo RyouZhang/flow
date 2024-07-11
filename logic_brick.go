@@ -7,7 +7,9 @@ import (
 )
 
 type LogicBrick struct {
-	name    string
+	name string
+	lc   ILifeCycle
+
 	workers chan bool
 	wg      sync.WaitGroup
 	kernal  func(*Message, chan<- *Message) error
@@ -28,6 +30,11 @@ type LogicBrick struct {
 
 func (b *LogicBrick) Name() string {
 	return b.name
+}
+
+func (b *LogicBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *LogicBrick) Linked(queue <-chan *Message) {
@@ -114,6 +121,7 @@ func (b *LogicBrick) pump() {
 	}
 	close(b.outQueue)
 	close(b.errQueue)
+	b.lc.Done()
 }
 
 func NewLogicBrick(

@@ -8,7 +8,9 @@ import (
 )
 
 type PriorityBrick struct {
-	name    string
+	name string
+	lc   ILifeCycle
+
 	workers chan bool
 	wg      sync.WaitGroup
 	kernal  func(*Message, chan<- *Message) error
@@ -29,6 +31,11 @@ type PriorityBrick struct {
 
 func (b *PriorityBrick) Name() string {
 	return b.name
+}
+
+func (b *PriorityBrick) AddLifeCycle(lc ILifeCycle) {
+	b.lc = lc
+	b.lc.Add(1)
 }
 
 func (b *PriorityBrick) Linked(queue <-chan *Message) {
@@ -86,6 +93,9 @@ func (b *PriorityBrick) handler(queue <-chan *Message) error {
 }
 
 func (b *PriorityBrick) loop() {
+	defer func() {
+		close(b.resQueue)
+	}()
 	flagKey := 0
 	for {
 	PULL:
@@ -113,6 +123,9 @@ func (b *PriorityBrick) loop() {
 }
 
 func (b *PriorityBrick) pump() {
+	defer func() {
+		b.lc.Done()
+	}()
 	for msg := range b.resQueue {
 		flag := false
 		for _, item := range b.outQueues {
