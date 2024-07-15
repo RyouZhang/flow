@@ -30,7 +30,6 @@ func (b *MergeBrick) Linked(inQueue <-chan *Message) {
 	go func() {
 		defer func() {
 			b.wg.Done()
-			b.lc.Done()
 		}()
 		for msg := range inQueue {
 			b.outQueue <- msg
@@ -39,6 +38,7 @@ func (b *MergeBrick) Linked(inQueue <-chan *Message) {
 	go b.once.Do(func() {
 		b.wg.Wait()
 		close(b.outQueue)
+		b.lc.Done()
 	})
 }
 
