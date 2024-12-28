@@ -11,7 +11,6 @@ type ReduceBrick struct {
 	lc   ILifeCycle
 
 	windowSeconds int //sec
-	msgKeys       []string
 	msgDic        map[string][]*Message
 
 	mapping  func(*Message) string
@@ -48,49 +47,23 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 			{
 				ts := time.Now()
 
-				index := -1
-				for i, key := range b.msgKeys {
-					target, ok := b.msgDic[key]
-					if !ok {
-						index = i
+				deleteKeys := make([]string, 0)
+				for key, target := range b.msgDic {
+					if target[0].Timestamp()+int64(b.windowSeconds*1000) < ts.UnixMilli() {
 						continue
 					}
-					if target[0].Timestamp()+int64(b.windowSeconds*1000) <= ts.UnixMilli() {
-						index = i
-
-						res, err := async.Safety(func() (interface{}, error) {
-							return b.reduce(target...)
-						})
-						if err != nil {
-							b.errQueue <- err
-						} else {
-							b.outQueue <- res.(*Message)
-						}
+					deleteKeys = append(deleteKeys, key)
+					res, err := async.Safety(func() (interface{}, error) {
+						return b.reduce(target...)
+					})
+					if err != nil {
+						b.errQueue <- err
 					} else {
-						break
+						b.outQueue <- res.(*Message)
 					}
 				}
-				switch {
-				case index == -1:
-					//do nothing
-				case index == len(b.msgDic)-1:
-					{
-						b.msgDic = make(map[string][]*Message)
-						b.msgKeys = make([]string, 0)
-					}
-				case index == 0:
-					{
-						key := b.msgKeys[0]
-						delete(b.msgDic, key)
-						b.msgKeys = b.msgKeys[1:]
-					}
-				default:
-					{
-						for i := 0; i <= index; i++ {
-							delete(b.msgDic, b.msgKeys[i])
-						}
-						b.msgKeys = b.msgKeys[index+1:]
-					}
+				for i, _ := range deleteKeys {
+					delete(b.msgDic, deleteKeys[i])
 				}
 				timer.Reset(500 * time.Millisecond)
 			}
@@ -116,7 +89,6 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 				_, ok := b.msgDic[key]
 				if false == ok {
 					b.msgDic[key] = []*Message{msg}
-					b.msgKeys = append(b.msgKeys, key)
 				} else {
 					b.msgDic[key] = append(b.msgDic[key], msg)
 				}
@@ -150,7 +122,6 @@ func NewReduceBrick(
 		windowSeconds: windowSeconds,
 		mapping:       mapping,
 		reduce:        reduce,
-		msgKeys:       make([]string, 0),
 		msgDic:        make(map[string][]*Message),
 		outQueue:      make(chan *Message, chanSize),
 		errQueue:      make(chan error, 8),
