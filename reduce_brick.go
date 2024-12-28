@@ -49,7 +49,7 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 
 				deleteKeys := make([]string, 0)
 				for key, target := range b.msgDic {
-					if target[0].Timestamp()+int64(b.windowSeconds*1000) < ts.UnixMilli() {
+					if target[0].Timestamp()+int64(b.windowSeconds*1000) > ts.UnixMilli() {
 						continue
 					}
 					deleteKeys = append(deleteKeys, key)
