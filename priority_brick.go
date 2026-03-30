@@ -2,10 +2,24 @@ package flow
 
 import (
 	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/RyouZhang/async-go"
 )
+
+const (
+	maxCount = 65535
+	// ms
+	maxSpan = 60000
+)
+
+type mQueue struct {
+	idx   int
+	queue <-chan *Message
+	ts    int64
+}
 
 type PriorityBrick struct {
 	name string
@@ -16,10 +30,10 @@ type PriorityBrick struct {
 	kernal  func(*Message, chan<- *Message) error
 
 	// support merge
-	stopKey    int
-	inQueueMux sync.RWMutex
-	inQueues   []<-chan *Message
-	resQueue   chan *Message
+	stopKey int
+	// inQueueMux sync.RWMutex
+	inQueues []*mQueue
+	resQueue chan *Message
 
 	// support route
 	chanSize      int
@@ -38,9 +52,14 @@ func (b *PriorityBrick) AddLifeCycle(lc ILifeCycle) {
 }
 
 func (b *PriorityBrick) Linked(queue <-chan *Message) {
-	b.inQueueMux.Lock()
-	defer b.inQueueMux.Unlock()
-	b.inQueues = append(b.inQueues, queue)
+	// b.inQueueMux.Lock()
+	// defer b.inQueueMux.Unlock()
+	idx := len(b.inQueues)
+	b.inQueues = append(b.inQueues, &mQueue{
+		idx:   idx,
+		queue: queue,
+		ts:    time.Now().UnixMilli(),
+	})
 	b.stopKey = b.stopKey<<1 | 1
 }
 
@@ -96,25 +115,50 @@ func (b *PriorityBrick) loop() {
 		close(b.resQueue)
 	}()
 	flagKey := 0
+	ts := time.Now().UnixMilli()
+	for _, mq := range b.inQueues {
+		mq.ts = ts
+	}
 	for {
+	RESET:
+		sort.Slice(b.inQueues, func(i, j int) bool {
+			if b.inQueues[i].idx < b.inQueues[j].idx {
+				if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
+					return false
+				}
+				return true
+			}
+			return false
+		})
+		ts = time.Now().UnixMilli()
+		count := 0
 	PULL:
-		b.inQueueMux.RLock()
+		// b.inQueueMux.RLock()
 		if len(b.inQueues) == 0 {
-			b.inQueueMux.RUnlock()
+			// b.inQueueMux.RUnlock()
 			continue
 		}
-		for i, queue := range b.inQueues {
-			err := b.handler(queue)
+		for i, mq := range b.inQueues {
+			err := b.handler(mq.queue)
+			mq.ts = ts
 			switch {
 			case err != nil && err.Error() == "Closed":
 				flagKey = flagKey | 1<<i
 			case err != nil && err.Error() == "Downgrade":
 			default:
-				b.inQueueMux.RUnlock()
-				goto PULL
+				{
+					count++
+					// b.inQueueMux.RUnlock()
+					if count >= maxCount {
+						// b.inQueueMux.Lock()
+						// b.inQueueMux.Unlock()
+						goto RESET
+					}
+					goto PULL
+				}
 			}
 		}
-		b.inQueueMux.RUnlock()
+		// b.inQueueMux.RUnlock()
 		if flagKey == b.stopKey {
 			return
 		}
@@ -172,7 +216,7 @@ func NewPriorityBrick(
 		workers:       make(chan bool, max_worker),
 		outQueue:      make(chan *Message, chanSize),
 		errQueue:      make(chan error, 8),
-		inQueues:      make([]<-chan *Message, 0),
+		inQueues:      make([]*mQueue, 0),
 		resQueue:      make(chan *Message, chanSize),
 		outQueues:     make([]*routeItem, 0),
 	}
