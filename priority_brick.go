@@ -115,9 +115,22 @@ func (b *PriorityBrick) loop() {
 		close(b.resQueue)
 	}()
 	flagKey := 0
+	ts := time.Now().UnixMilli()
+	for _, mq := range b.inQueues {
+		mq.ts = ts
+	}
 	for {
 	RESET:
-		ts := time.Now().UnixMilli()
+		sort.Slice(b.inQueues, func(i, j int) bool {
+			if b.inQueues[i].idx < b.inQueues[j].idx {
+				if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
+					return false
+				}
+				return true
+			}
+			return false
+		})
+		ts = time.Now().UnixMilli()
 		count := 0
 	PULL:
 		// b.inQueueMux.RLock()
@@ -127,6 +140,7 @@ func (b *PriorityBrick) loop() {
 		}
 		for i, mq := range b.inQueues {
 			err := b.handler(mq.queue)
+			mq.ts = ts
 			switch {
 			case err != nil && err.Error() == "Closed":
 				flagKey = flagKey | 1<<i
@@ -134,19 +148,9 @@ func (b *PriorityBrick) loop() {
 			default:
 				{
 					count++
-					mq.ts = ts
 					// b.inQueueMux.RUnlock()
 					if count >= maxCount {
 						// b.inQueueMux.Lock()
-						sort.Slice(b.inQueues, func(i, j int) bool {				
-							if b.inQueues[i].idx < b.inQueues[j].idx {
-								if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
-									return false
-								}
-								return true
-							}
-							return false
-						})
 						// b.inQueueMux.Unlock()
 						goto RESET
 					}
