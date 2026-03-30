@@ -2,7 +2,9 @@ package flow
 
 import (
 	"fmt"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/RyouZhang/async-go"
 )
@@ -52,7 +54,7 @@ func (b *PriorityBrick) AddLifeCycle(lc ILifeCycle) {
 func (b *PriorityBrick) Linked(queue <-chan *Message) {
 	// b.inQueueMux.Lock()
 	// defer b.inQueueMux.Unlock()
-	idx := len(b.inQueue)
+	idx := len(b.inQueues)
 	b.inQueues = append(b.inQueues, &mQueue{
 		idx:   idx,
 		queue: queue,
@@ -136,14 +138,15 @@ func (b *PriorityBrick) loop() {
 					// b.inQueueMux.RUnlock()
 					if count >= maxCount {
 						// b.inQueueMux.Lock()
-						b.inQueues = slices.SortedFunc(b.inQueues, func(a, b *mQueue) int {
-							if a.idx < b.idx {
-								if a.ts > b.ts+maxSpan {
-									return 1
+						sort.Slice(b.inQueues, func(i, j int) bool {
+
+							if b.inQueues[i].idx < b.inQueues[j].idx {
+								if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
+									return false
 								}
-								return -1
+								return true
 							}
-							return 1
+							return false
 						})
 						// b.inQueueMux.Unlock()
 						goto RESET
