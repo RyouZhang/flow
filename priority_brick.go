@@ -138,8 +138,7 @@ func (b *PriorityBrick) loop() {
 					// b.inQueueMux.RUnlock()
 					if count >= maxCount {
 						// b.inQueueMux.Lock()
-						sort.Slice(b.inQueues, func(i, j int) bool {
-
+						sort.Slice(b.inQueues, func(i, j int) bool {				
 							if b.inQueues[i].idx < b.inQueues[j].idx {
 								if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
 									return false
