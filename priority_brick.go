@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	maxCount = 1_000_000
+	maxCount = 100_000
 	// ms
 	maxSpan = 60000
 )
