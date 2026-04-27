@@ -122,13 +122,15 @@ func (b *PriorityBrick) loop() {
 	for {
 	RESET:
 		sort.Slice(b.inQueues, func(i, j int) bool {
-			if b.inQueues[i].idx < b.inQueues[j].idx {
-				if b.inQueues[i].ts > b.inQueues[j].ts+maxSpan {
-					return false
-				}
-				return true
+			offset := 0
+			diff := b.inQueues[i].ts - b.inQueues[j].ts
+			switch {
+			case diff > maxSpan:
+				offset = 2
+			case diff < -maxSpan:
+				offset = -2
 			}
-			return false
+			return b.inQueues[i].idx+offset < b.inQueues[j].idx
 		})
 		ts = time.Now().UnixMilli()
 		count := 0
