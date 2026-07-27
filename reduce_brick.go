@@ -10,8 +10,8 @@ type ReduceBrick struct {
 	name string
 	lc   ILifeCycle
 
-	windowSeconds int //sec
-	msgDic        map[string][]*Message
+	windowMillis int //ms
+	msgDic       map[string][]*Message
 
 	mapping  func(*Message) string
 	reduce   func(...*Message) (*Message, error)
@@ -40,7 +40,7 @@ func (b *ReduceBrick) Errors() <-chan error {
 }
 
 func (b *ReduceBrick) loop(inQueue <-chan *Message) {
-	timer := time.NewTimer(500 * time.Millisecond)
+	timer := time.NewTimer(100 * time.Millisecond)
 	for {
 		select {
 		case <-timer.C:
@@ -49,7 +49,7 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 
 				deleteKeys := make([]string, 0)
 				for key, target := range b.msgDic {
-					if target[0].Timestamp()+int64(b.windowSeconds*1000) > ts.UnixMilli() {
+					if target[0].Timestamp()+int64(b.windowMillis) > ts.UnixMilli() {
 						continue
 					}
 					deleteKeys = append(deleteKeys, key)
@@ -65,7 +65,7 @@ func (b *ReduceBrick) loop(inQueue <-chan *Message) {
 				for i, _ := range deleteKeys {
 					delete(b.msgDic, deleteKeys[i])
 				}
-				timer.Reset(500 * time.Millisecond)
+				timer.Reset(100 * time.Millisecond)
 			}
 		case msg, ok := <-inQueue:
 			{
@@ -113,18 +113,22 @@ End:
 
 func NewReduceBrick(
 	name string,
-	windowSeconds int,
+	windowMillis int,
 	mapping func(*Message) string,
 	reduce func(...*Message) (*Message, error),
 	chanSize int) *ReduceBrick {
+	val := windowMillis
+	if val < 100 {
+		val = 100
+	}
 	l := &ReduceBrick{
-		name:          name,
-		windowSeconds: windowSeconds,
-		mapping:       mapping,
-		reduce:        reduce,
-		msgDic:        make(map[string][]*Message),
-		outQueue:      make(chan *Message, chanSize),
-		errQueue:      make(chan error, 8),
+		name:         name,
+		windowMillis: val,
+		mapping:      mapping,
+		reduce:       reduce,
+		msgDic:       make(map[string][]*Message),
+		outQueue:     make(chan *Message, chanSize),
+		errQueue:     make(chan error, 8),
 	}
 	return l
 }
